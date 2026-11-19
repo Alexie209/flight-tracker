@@ -15,12 +15,13 @@ SWEEP_DAYS = 7       # full sweep interval
 TOP_N = 3            # trips re-checked between sweeps
 MIN_DROP = 1.0       # EUR change that counts as a drop
 ORIGIN, DEST = "CLJ", "BCN"
+SKIP = {"2027-02-02", "2027-03-16", "2027-04-27"}  # outbound dates not tracked
 
 
 def trips():
     d, out = date(2027, 2, 2), []   # first Tuesday of Feb 2027
     while d <= date(2027, 4, 27):
-        if d.weekday() == 1:
+        if d.weekday() == 1 and d.isoformat() not in SKIP:
             out.append((d.isoformat(), (d + timedelta(days=4)).isoformat()))
         d += timedelta(days=1)
     return out
