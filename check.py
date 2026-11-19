@@ -95,6 +95,7 @@ def main():
         time.sleep(1)
     if sweep:
         state["last_sweep"] = now.isoformat(timespec="minutes")
+    DATA.parent.mkdir(exist_ok=True)
     DATA.write_text(json.dumps(state, indent=1))
 
     cheapest = sorted((v["last"], k, v["return"]) for k, v in state["trips"].items() if v["last"] is not None)[:3]
