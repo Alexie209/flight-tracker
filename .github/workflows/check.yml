@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: "17 6 * * *"   # daily, off-peak minute
   workflow_dispatch:
+    inputs:
+      max_trips:
+        description: "Cap trips searched this run (testing)"
+        required: false
 concurrency: check-fares
 permissions:
   contents: write
@@ -16,8 +20,10 @@ jobs:
           LETSFG_API_KEY: ${{ secrets.LETSFG_API_KEY }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          MAX_TRIPS: ${{ inputs.max_trips }}
       - name: Save history
+        if: always()
         run: |
           git config user.name "fare-bot"; git config user.email "fare-bot@users.noreply.github.com"
-          git add data/prices.json
+          git add -A data
           git diff --cached --quiet || (git commit -m "Update fares" && git push)

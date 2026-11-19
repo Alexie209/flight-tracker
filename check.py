@@ -4,7 +4,7 @@ Budget rule: LetsFG gives a fixed pool of free searches. Never search below RESE
 remaining, and report the remaining count on Telegram every run.
 Run plan: full sweep of every trip weekly, otherwise only the cheapest few.
 """
-import json, os, sys, time, urllib.error, urllib.parse, urllib.request
+import json, os, sys, time, traceback, urllib.parse, urllib.request
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -71,16 +71,19 @@ def main():
         priced = [(state["trips"].get(o, {}).get("last"), o, b) for o, b in all_trips]
         priced = sorted((p for p in priced if p[0] is not None), key=lambda p: p[0])
         todo = [(o, b) for _, o, b in priced[:TOP_N]]
-    todo = todo[:allowed]
+    todo = todo[:min(allowed, int(os.environ.get("MAX_TRIPS") or 999))]
     sweep = sweep and len(todo) == len(all_trips)
+    print(f"left={left} sweep={sweep} trips={len(todo)}", flush=True)
 
     drops, errors, done = [], [], 0
     for out, back in todo:
         try:
             price = search(key, out, back)
-        except (urllib.error.URLError, KeyError, ValueError) as e:
+        except Exception as e:
+            traceback.print_exc()
             errors.append(f"{out}: {type(e).__name__}")
             continue
+        print(out, price, flush=True)
         done += 1
         t = state["trips"].setdefault(out, {"return": back, "low": None, "last": None, "history": []})
         t["history"].append({"t": now.isoformat(timespec="minutes"), "price": price})
@@ -111,7 +114,9 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:  # tell the phone instead of failing silently
+        traceback.print_exc()
         try:
             telegram(f"Flight tracker error: {type(e).__name__}")
-        finally:
-            sys.exit(1)
+        except Exception:
+            traceback.print_exc()
+        sys.exit(1)
